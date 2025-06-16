@@ -1,6 +1,7 @@
 package com.kinduberre.redissearchdemo.repository;
 
 import com.google.gson.Gson;
+import com.kinduberre.redissearchdemo.model.CategoryStats;
 import com.kinduberre.redissearchdemo.model.Page;
 import com.kinduberre.redissearchdemo.model.Post;
 import org.springframework.stereotype.Repository;
@@ -8,11 +9,17 @@ import redis.clients.jedis.UnifiedJedis;
 import redis.clients.jedis.search.Document;
 import redis.clients.jedis.search.Query;
 import redis.clients.jedis.search.SearchResult;
+import redis.clients.jedis.search.aggr.AggregationBuilder;
+import redis.clients.jedis.search.aggr.AggregationResult;
+import redis.clients.jedis.search.aggr.Reducers;
 
+import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 @Repository
 public class PostRepository {
@@ -96,5 +103,28 @@ public class PostRepository {
                 .getValue()
                 .toString();
         return gson.fromJson(jsonDoc, Post.class);
+    }
+
+    public List<CategoryStats> getCategoryWiseTotalPosts() {
+        AggregationBuilder aggregationBuilder = new AggregationBuilder()
+                .groupBy("@tags",
+                        Reducers.count().as("NO_OF_POSTS"),
+                        Reducers.avg("@views").as("AVERAGE_VIEWS"));
+
+        AggregationResult aggregationResult = jedis.ftAggregate("post-idx", aggregationBuilder);
+
+        List<CategoryStats> categoryStatsList = new ArrayList<>();
+
+        LongStream.range(0, aggregationResult.getTotalResults())
+                .mapToObj(idx -> aggregationResult.getRow( (int) idx))
+                .forEach(row -> { categoryStatsList.add(
+                        CategoryStats.builder()
+                                .totalPosts(row.getLong("NO_OF_POSTS"))
+                                .averageViews(new DecimalFormat("#.##").format(row.getDouble("AVERAGE_VIEWS")))
+                                .tags(row.getString("tags"))
+                                .build());
+                });
+
+        return categoryStatsList;
     }
 }

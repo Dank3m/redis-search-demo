@@ -1,13 +1,14 @@
 package com.kinduberre.redissearchdemo.controller;
 
+import com.kinduberre.redissearchdemo.model.CategoryStats;
 import com.kinduberre.redissearchdemo.model.Page;
 import com.kinduberre.redissearchdemo.service.PostService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -25,6 +26,11 @@ public class SearchController {
                         @RequestParam(name = "tags", required = false) Set<String> tags,
                         @RequestParam(name = "page", defaultValue = "1") Integer page) {
         return postService.search(content, tags, page);
+    }
+
+    @GetMapping("/categoryWisepost")
+    public List<CategoryStats> getCategoryWiseTotalPosts() {
+        return postService.getCategoryWiseTotalPosts();
     }
 
 }
